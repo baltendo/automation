@@ -120,10 +120,16 @@ fn main() {
         std::process::exit(1);
     });
 
-    // Step 5: Copy binary to /usr/local/bin/
+    // Step 5: Stop running chromedriver processes
     let extracted_binary = tmp_dir.path().join("chromedriver-linux64/chromedriver");
     let dest = "/usr/local/bin/chromedriver";
 
+    match Command::new("pkill").arg("-x").arg("chromedriver").status() {
+        Ok(status) if status.success() => println!("Stopped running chromedriver processes."),
+        _ => {}
+    }
+
+    // Step 6: Copy binary to /usr/local/bin/
     println!("Installing chromedriver to {dest}...");
     match fs::copy(&extracted_binary, dest) {
         Ok(_) => {}
@@ -143,6 +149,6 @@ fn main() {
         std::process::exit(1);
     });
 
-    // Step 6: Confirm
+    // Step 7: Confirm
     println!("chromedriver {chrome_version} installed successfully.");
 }
