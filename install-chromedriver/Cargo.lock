@@ -679,6 +679,8 @@ name = "install-chromedriver"
 version = "0.1.0"
 dependencies = [
  "reqwest",
+ "serde",
+ "serde_json",
  "tempfile",
  "zip",
 ]
