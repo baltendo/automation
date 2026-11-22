@@ -133,6 +133,35 @@ fn find_chromedriver_url_from_api(chrome_version: &str) -> Result<String, String
     }
 }
 
+fn get_latest_available_chrome_version() -> Result<String, String> {
+    let output = Command::new("apt-cache")
+        .args(["policy", "google-chrome-stable"])
+        .output()
+        .map_err(|e| format!("Failed to run apt-cache: {e}"))?;
+
+    if !output.status.success() {
+        return Err("apt-cache policy returned non-zero exit code".into());
+    }
+
+    // Output looks like:
+    //   Installed: 135.0.7049.84-1
+    //   Candidate: 135.0.7049.84-1
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        if let Some(candidate) = line.trim().strip_prefix("Candidate:") {
+            let version = candidate.trim();
+            // Strip the debian revision suffix (e.g. "-1")
+            let version = match version.rfind('-') {
+                Some(idx) => &version[..idx],
+                None => version,
+            };
+            return Ok(version.to_string());
+        }
+    }
+
+    Err("Could not find Candidate version in apt-cache output".into())
+}
+
 fn main() {
     // Step 1: Get Chrome version
     println!("Checking installed Chrome version...");
@@ -144,6 +173,17 @@ fn main() {
         }
     };
     println!("Chrome version: {chrome_version}");
+
+    println!("Checking latest available Chrome version...");
+    match get_latest_available_chrome_version() {
+        Ok(latest) => {
+            println!("Latest available Chrome (apt): {latest}");
+            if latest != chrome_version {
+                println!("Note: a newer Chrome version is available — consider running: sudo apt-get install --only-upgrade google-chrome-stable");
+            }
+        }
+        Err(e) => println!("Could not check latest available Chrome: {e}"),
+    }
 
     // Step 2: Check chromedriver version
     println!("Checking installed chromedriver version...");
